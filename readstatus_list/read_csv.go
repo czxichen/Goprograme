@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/djimenez/iconv-go"
 	"github.com/go-xorm/core"
@@ -38,16 +39,17 @@ var head = []string{"GameID", "IssuerId",
 func main() {
 	flag.BoolVar(&debug, "d", false, "-d=true打印debug信息")
 	flag.Parse()
-
 	var readline int
-	fmt.Printf("1:更新server.xlsx中update的内容\n2:插入server.xlsx中insert的内容\n")
+	fmt.Printf("1:同步线上状态服务器列表\n2:更新server.xlsx中update的内容\n3:插入中server.xlsx中的insert的内容\n")
 	fmt.Print("输入操作选项：")
-	getOnLineList()
-	writehead()
 	fmt.Scan(&readline)
 	engines := Engines()
 	switch readline {
 	case 1:
+		getOnLineList()
+		writehead()
+		fmt.Println("已同步线上最新列表,保存在server.xlsx")
+	case 2:
 		File, e := xlsx.OpenFile("server.xlsx")
 		if e != nil {
 			fmt.Println(e)
@@ -55,7 +57,7 @@ func main() {
 		}
 		fmt.Println("更新server.xlsx中update的内容")
 		update(engines, File.Sheet["update"])
-	case 2:
+	case 3:
 		File, e := xlsx.OpenFile("server.xlsx")
 		if e != nil {
 			fmt.Println(e)
@@ -65,6 +67,11 @@ func main() {
 		insert(engines, File.Sheet["insert"])
 	default:
 		fmt.Println("使用方法：输入想要操作的选项（例如：1）")
+	}
+	fmt.Printf("\n\n20秒后自动退出,也可直接关闭\n")
+	for i := 20; i > 0; i-- {
+		fmt.Printf("\r剩余%d秒...", i)
+		time.Sleep(1e9)
 	}
 }
 
@@ -80,8 +87,11 @@ func update(engines *xorm.Engine, File *xlsx.Sheet) {
 			list = append(list, cell)
 		}
 		date := parse(list)
+		fmt.Println(date)
 		if date != nil {
-			n, err := engines.Where("IssuerId = ? and ServerID = ?", date.IssuerId, date.ServerID).Update(date)
+			n, err := engines.Where("IssuerId = ? and ServerID = ?", date.IssuerId,
+				date.ServerID).Cols("OnlineNum", "IsRuning", "ServerStyle",
+				"IsStartIPWhile", "OrderBy").Update(date)
 			if n == 0 || err != nil {
 				fmt.Printf("更新:%s出错.\n", fmt.Sprint(*date))
 				continue
@@ -95,7 +105,11 @@ func update(engines *xorm.Engine, File *xlsx.Sheet) {
 
 func insert(engines *xorm.Engine, File *xlsx.Sheet) {
 	var num int = 0
-	for _, row := range File.Rows {
+	if len(File.Rows) < 1 {
+		fmt.Println("检查更新列表.")
+		return
+	}
+	for _, row := range File.Rows[1:] {
 		var list []*xlsx.Cell
 		for _, cell := range row.Cells {
 			list = append(list, cell)
