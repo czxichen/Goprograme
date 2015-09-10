@@ -87,10 +87,9 @@ func update(engines *xorm.Engine, File *xlsx.Sheet) {
 			list = append(list, cell)
 		}
 		date := parse(list)
-		fmt.Println(date)
 		if date != nil {
 			n, err := engines.Where("IssuerId = ? and ServerID = ?", date.IssuerId,
-				date.ServerID).Cols("OnlineNum", "IsRuning", "ServerStyle",
+				date.ServerID).MustCols("OnlineNum", "IsRuning", "ServerStyle",
 				"IsStartIPWhile", "OrderBy").Update(date)
 			if n == 0 || err != nil {
 				fmt.Printf("更新:%s出错.\n", fmt.Sprint(*date))
