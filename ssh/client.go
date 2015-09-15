@@ -14,6 +14,10 @@ func main() {
 	var path, ip string
 	flag.StringVar(&path, "p", "passwd", "指定passwd文件 -p=passwd")
 	flag.Parse()
+	if len(os.Args) <= 1 {
+		fmt.Printf("用法：%s %s\n", os.Args[0], "127.0.0.1")
+		return
+	}
 	ip = os.Args[1]
 	user := parseconfig(path, ip)
 	if user == nil || len(user) != 4 {
