@@ -12,14 +12,15 @@ import (
 
 func main() {
 	var path, ip string
-	flag.StringVar(&path, "p", "cfg", "指定passwd文件 -p=cfg")
-	flag.StringVar(&ip, "i", "127.0.0.1", "指定要登录的IP -i=127.0.0.1")
+	flag.StringVar(&path, "p", "passwd", "指定passwd文件 -p=passwd")
 	flag.Parse()
+	ip = os.Args[1]
 	user := parseconfig(path, ip)
 	if user == nil || len(user) != 4 {
 		fmt.Println("匹配IP出错：", ip)
 		return
 	}
+
 	client(user[0], user[1], fmt.Sprintf("%s:%s", user[2], user[3]))
 }
 
@@ -32,18 +33,17 @@ func parseconfig(path, ip string) []string {
 	defer File.Close()
 	str := "密码文件格式：root 123456 127.0.0.1 22"
 	IO := bufio.NewReader(File)
-	line, _, err := IO.ReadLine()
-	if err != nil {
-		if err.Error() == "EOF" {
-			fmt.Println(str)
-			return nil
+	for {
+		line, _, err := IO.ReadLine()
+		if err != nil {
+			fmt.Println("解析配置文件: ", err)
+			break
 		}
-		fmt.Println("解析配置文件: ", err)
-		fmt.Println(str)
-		return nil
-	}
-	if strings.Contains(string(line), ip) {
-		return split(string(line))
+		if strings.Contains(string(line), ip) {
+			if split(string(line))[2] == ip {
+				return split(string(line))
+			}
+		}
 	}
 	fmt.Println(str)
 	return nil
