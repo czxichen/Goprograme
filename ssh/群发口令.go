@@ -81,7 +81,7 @@ func client(info cmd_info, result chan string, num chan int32, returnnum *int32)
 	}
 	var client *ssh.Client
 	var err error
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		client, err = ssh.Dial("tcp", info.ip, config)
 		if err == nil {
 			break
