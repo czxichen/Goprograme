@@ -39,12 +39,18 @@ func main() {
 	i := flag.Int("m", 0, "-m=12345")
 	flag.Parse()
 	x := GetShareMem(*i)
+	if x == nil {
+		fmt.Println("open error")
+	}
 	defer x.Close()
 	fmt.Println(x.Read())
 }
 
 func GetShareMem(shm_id int) *ShareMem {
-	m := C.GetMem(C.int(shm_id))
+	m,err := C.GetMem(C.int(shm_id))
+	if err != nil {
+		return nil
+	}
 	return &ShareMem{m}
 }
 
