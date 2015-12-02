@@ -16,9 +16,6 @@ type Logger struct {
 	file    chan string
 }
 
-func ce() {
-	fmt.Println("FUCK")
-}
 func NewLog(level string, console bool, File *os.File, buf int) (*Logger, error) {
 	log := &Logger{console: console, tformat: format}
 	if File != nil {
