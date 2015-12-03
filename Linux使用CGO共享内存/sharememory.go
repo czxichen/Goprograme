@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"time"
+	"unsafe"
 )
 
 /*
@@ -97,8 +98,9 @@ func GetShareMem(path string, size int) (*Mem, error) {
 	if info.IsDir() {
 		return nil, errors.New("Must Is File")
 	}
-	num := C.getMem(C.CString(path), C.int(size))
-
+	cstr := C.CString(path)
+	num := C.getMem(cstr, C.int(size))
+	C.free(unsafe.Pointer(cstr))
 	switch num {
 	case 0:
 		return &Mem{C.Shm_id, size}, nil
