@@ -1,0 +1,6 @@
+{"Listen":"0.0.0.0",
+"Port":"1789",
+"TemplateName":"server.zip",
+"CfgTempRelational":"tmpconfig/pathconfig.ini",
+"RelationalTable":"tmpconfig/relational_table.ini"
+}
