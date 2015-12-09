@@ -21,7 +21,7 @@ func init() {
 
 func main() {
 	if all_ssh.ArgsInfo.IP != "" {
-		fmt.Println("开始登录:%s\n", all_ssh.ArgsInfo.IP)
+		fmt.Printf("开始登录:%s\n", all_ssh.ArgsInfo.IP)
 		for _, v := range all_ssh.ServerList {
 			if v.IP == all_ssh.ArgsInfo.IP {
 				client := all_ssh.Connection(v)
