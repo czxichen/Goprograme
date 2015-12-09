@@ -19,9 +19,11 @@ type ConnetctionInfo struct {
 }
 
 var ErrorList []string
+var privateKey []ssh.AuthMethod
 
 func Connection(info ConnetctionInfo) *ssh.Client {
 	var auths []ssh.AuthMethod
+	auths = append(auths, privateKey...)
 	if aconn, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
 		auths = append(auths, ssh.PublicKeysCallback(agent.NewClient(aconn).Signers))
 	}

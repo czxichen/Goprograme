@@ -12,12 +12,14 @@ var Result chan string = make(chan string, 5)
 var W *sync.WaitGroup = new(sync.WaitGroup)
 
 func Run(Con *ssh.Client, cmd string) {
+	defer Con.Close()
 	defer W.Done()
 	s, err := Con.NewSession()
 	if err != nil {
 		fmt.Printf("%s:新建会话失败.命令未执行.", Con.RemoteAddr())
 		return
 	}
+	fmt.Printf("成功连接:%s\n", Con.RemoteAddr())
 	buf, err := s.Output(cmd)
 	if err != nil {
 		fmt.Printf("%s:命令执行失败.", Con.RemoteAddr())
@@ -27,6 +29,7 @@ func Run(Con *ssh.Client, cmd string) {
 }
 
 func TtyClient(Con *ssh.Client) error {
+	defer Con.Close()
 	session, err := Con.NewSession()
 	if err != nil {
 		return err
