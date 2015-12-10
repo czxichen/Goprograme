@@ -1,12 +1,12 @@
 package all_ssh
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
 	"sftp"
 
+	"github.com/fatih/color"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -18,16 +18,16 @@ func CopyFile(conn *ssh.Client, FileName, DirectoryPath string) bool {
 	}
 	con, err := sftp.NewClient(conn, sftp.MaxPacket(5e9))
 	if err != nil {
-		fmt.Printf("%s传输文件新建会话错误: %s\n", conn.RemoteAddr(), err)
+		color.Red("%s传输文件新建会话错误: %s\n", conn.RemoteAddr(), err)
 		return false
 	}
 	sFile, _ := os.Open(FileName)
 	defer sFile.Close()
-	dFile := fmt.Sprintf("%s%s", DirectoryPath, FileName)
-	fmt.Printf("%s 目标路径:%s\n", conn.RemoteAddr(), dFile)
+	dFile := DirectoryPath + FileName
+	color.Yellow("%s 目标路径:%s\n", conn.RemoteAddr(), dFile)
 	File, err := con.OpenFile(dFile, os.O_CREATE|os.O_TRUNC|os.O_RDWR)
 	if err != nil {
-		fmt.Printf("%s 创建文件%s错误: %s \n", conn.RemoteAddr(), dFile, err)
+		color.Red("%s 创建文件%s错误: %s \n", conn.RemoteAddr(), dFile, err)
 		return false
 	}
 	defer File.Close()
@@ -42,6 +42,6 @@ func CopyFile(conn *ssh.Client, FileName, DirectoryPath string) bool {
 		}
 		File.Write(buf[:n])
 	}
-	fmt.Printf("上传%s到%s成功.\n", FileName, conn.RemoteAddr())
+	color.Blue("上传%s到%s成功.\n", FileName, conn.RemoteAddr())
 	return true
 }

@@ -2,10 +2,10 @@ package all_ssh
 
 import (
 	"fmt"
+	"github.com/fatih/color"
+	"golang.org/x/crypto/ssh"
 	"os"
 	"sync"
-
-	"golang.org/x/crypto/ssh"
 )
 
 var Result chan string = make(chan string, 5)
@@ -16,16 +16,16 @@ func Run(Con *ssh.Client, cmd string) {
 	defer W.Done()
 	s, err := Con.NewSession()
 	if err != nil {
-		fmt.Printf("%s:新建会话失败.命令未执行.", Con.RemoteAddr())
+		color.Red("%s:新建会话失败.命令未执行.", Con.RemoteAddr())
 		return
 	}
-	fmt.Printf("成功连接:%s\n", Con.RemoteAddr())
+	color.Yellow("成功连接:%s\n", Con.RemoteAddr())
 	buf, err := s.Output(cmd)
 	if err != nil {
-		fmt.Printf("%s:命令执行失败.", Con.RemoteAddr())
+		color.Red("%s:命令执行失败.", Con.RemoteAddr())
 		return
 	}
-	Result <- fmt.Sprintf("%s 的执行结果:\n%s\n", Con.RemoteAddr(), string(buf))
+	Result <- fmt.Sprintf("%s 的执行结果:\n%s\n", Con.RemoteAddr().String(), string(buf))
 }
 
 func TtyClient(Con *ssh.Client) error {

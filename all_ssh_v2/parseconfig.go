@@ -2,7 +2,7 @@ package all_ssh
 
 import (
 	"bufio"
-	"fmt"
+	"github.com/fatih/color"
 	"os"
 	"strings"
 )
@@ -26,7 +26,7 @@ func Parse(path string) error {
 		}
 		list := split(string(line))
 		if len(list) != 5 {
-			fmt.Printf("ErrorLine:%d %s\n", num, string(line))
+			color.Red("ErrorLine:%d %s\n", num, string(line))
 			continue
 		}
 		info := ConnetctionInfo{list[0], list[1], list[2], list[3], list[4]}
