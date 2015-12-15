@@ -32,12 +32,13 @@ func Connection(info ConnetctionInfo) *ssh.Client {
 		User: info.User,
 		Auth: auths,
 	}
-	for i := 0; i < 5; i++ {
-		conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", info.IP, info.Port), &config)
+	for i := 0; i < 3; i++ {
+		//conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", info.IP, info.Port), &config)
+		conn, err := ssh.DialTimeOut("tcp", fmt.Sprintf("%s:%s", info.IP, info.Port), 30, &config)
 		if err == nil {
 			return conn
 		}
-		if i == 4 && err != nil {
+		if i == 2 && err != nil {
 			ErrorList = append(ErrorList, fmt.Sprintf("连接%s失败:%s\n", info.IP, err))
 			return nil
 		}

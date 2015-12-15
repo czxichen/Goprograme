@@ -1,10 +1,10 @@
 package all_ssh
 
 import (
+	"fmt"
 	"os"
-	"strings"
-
 	"sftp"
+	"strings"
 
 	"github.com/fatih/color"
 	"golang.org/x/crypto/ssh"
@@ -12,7 +12,6 @@ import (
 
 func CopyFile(conn *ssh.Client, FileName, DirectoryPath string) bool {
 	defer conn.Close()
-	defer W.Done()
 	if !strings.HasSuffix(DirectoryPath, "/") {
 		DirectoryPath = DirectoryPath + "/"
 	}
@@ -24,7 +23,7 @@ func CopyFile(conn *ssh.Client, FileName, DirectoryPath string) bool {
 	sFile, _ := os.Open(FileName)
 	defer sFile.Close()
 	dFile := DirectoryPath + FileName
-	color.Yellow("%s 目标路径:%s\n", conn.RemoteAddr(), dFile)
+	fmt.Printf("%s 目标路径:%s\n", conn.RemoteAddr(), dFile)
 	File, err := con.OpenFile(dFile, os.O_CREATE|os.O_TRUNC|os.O_RDWR)
 	if err != nil {
 		color.Red("%s 创建文件%s错误: %s \n", conn.RemoteAddr(), dFile, err)
@@ -42,6 +41,6 @@ func CopyFile(conn *ssh.Client, FileName, DirectoryPath string) bool {
 		}
 		File.Write(buf[:n])
 	}
-	color.Blue("上传%s到%s成功.\n", FileName, conn.RemoteAddr())
+	Result <- fmt.Sprintf("上传%s到%s成功.\n", FileName, conn.RemoteAddr())
 	return true
 }
