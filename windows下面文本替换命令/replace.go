@@ -51,6 +51,7 @@ func main() {
 		file = "^" + file
 	}
 	file += "$"
+
 	Reg, Err = regexp.Compile(file)
 	if Err != nil {
 		fmt.Printf("Regexp string error. Error info: %s\n", Err)
