@@ -54,7 +54,7 @@ func main() {
 
 	Reg, Err = regexp.Compile(file)
 	if Err != nil {
-		fmt.Printf("Regexp string error. Error info: %s\n", Err)
+		fmt.Printf("Regexp string error.\nError info: %s\n", Err)
 		return
 	}
 	err := filepath.Walk(dir, walk)
@@ -64,6 +64,7 @@ func main() {
 }
 
 func walk(root string, info os.FileInfo, err error) error {
+	root = filepath.ToSlash(root)
 	if err != nil {
 		return err
 	}
@@ -77,7 +78,8 @@ func walk(root string, info os.FileInfo, err error) error {
 	if readall {
 		ReadAll(root)
 	} else {
-		tmp := fmt.Sprintf(".%s.tmp", root)
+		path := filepath.Dir(root) + "/." + filepath.Base(root)
+		tmp := fmt.Sprintf("%s.tmp", path)
 		if err := ReadLine(root, tmp); err != nil {
 			return nil
 		}
@@ -90,13 +92,13 @@ func walk(root string, info os.FileInfo, err error) error {
 func ReadLine(root, tmp string) error {
 	File, err := os.Open(root)
 	if err != nil {
-		fmt.Printf("Open file %s faild.Error Info: %s\n", root, err)
+		fmt.Printf("Open file %s faild.\nError Info: %s\n", root, err)
 		return err
 	}
 	defer File.Close()
 	tmpFile, err := os.Create(tmp)
 	if err != nil {
-		fmt.Printf("Create temporary files for %s faild,\n", root)
+		fmt.Printf("Create temporary files for %s faild.\nError info %s\n", root, err)
 		return err
 	}
 	defer tmpFile.Close()
@@ -111,27 +113,29 @@ func ReadLine(root, tmp string) error {
 				tmpFile.Write(line)
 				break
 			}
-			fmt.Printf("Read %s error.Error Info: %s\n", root, err)
+			fmt.Printf("Read %s error.\nError Info: %s\n", root, err)
 			return nil
 		}
 		line = bytes.Replace(line, []byte(oldstr), []byte(newstr), -1)
 		tmpFile.Write(line)
 	}
-	fmt.Printf("File: %s Replace: %d\n", root, num)
+	if num > 0 {
+		fmt.Printf("File: %s Replace: %d\n", root, num)
+	}
 	return nil
 }
 
 func ReadAll(root string) {
 	body, err := ioutil.ReadFile(root)
 	if err != nil {
-		fmt.Printf("Read file %s faild.Error Info: %s\n", root, err)
+		fmt.Printf("Read file %s faild.\nError Info: %s\n", root, err)
 		return
 	}
 	num := bytes.Count(body, []byte(oldstr))
 	body = bytes.Replace(body, []byte(oldstr), []byte(newstr), -1)
 	File, err := os.Create(root)
 	if err != nil {
-		fmt.Printf("Create replace file %s faild.Error Info: %s\n", root, err)
+		fmt.Printf("Create replace file %s faild.\nError Info: %s\n", root, err)
 		return
 	}
 	defer File.Close()
