@@ -72,6 +72,7 @@ func (hc *HeadConnection) Write(p []byte) (int, error) {
 	return hc.rwc.Write(p)
 }
 
+//关闭conection链接,并还回池子.
 func (hc *HeadConnection) Close() {
 	hc.rwc.Close()
 	putConnction(hc)
@@ -81,6 +82,7 @@ func (hc *HeadConnection) RemoteAddr() string {
 	return hc.rwc.RemoteAddr().String()
 }
 
+//返回一个HeadConnection指针.
 func NewConnction(con net.Conn) *HeadConnection {
 	c := connctionPool.Get()
 	if h, ok := c.(*HeadConnection); ok {
