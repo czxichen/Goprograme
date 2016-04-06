@@ -56,10 +56,46 @@ func (self FindFiles) RegFindFile(reg string) ([]string, error) {
 	}
 	for _, v := range infos {
 		if Reg.MatchString(v.Name()) {
+			if v.IsDir() && !self.MatchDir {
+				continue
+			}
 			list = append(list, path+v.Name())
 		}
 	}
 	return list, nil
+}
+
+func (self FindFiles) DateAndRegexp(date int64, reg string) ([]string, error) {
+	var l []string
+	list, err := self.RegFindFile(reg)
+	if err != nil {
+		return l, err
+	}
+	date = date * 24 * 60 * 60
+	var less bool = false
+	if date <= 0 {
+		date = time.Now().Unix() + date
+		less = true
+	} else {
+		date = time.Now().Unix() - date
+	}
+	for _, v := range list {
+		info, err := os.Stat(v)
+		if err != nil {
+			continue
+		}
+		if less {
+			if date > info.ModTime().Unix() {
+				continue
+			}
+		} else {
+			if date < info.ModTime().Unix() {
+				continue
+			}
+		}
+		l = append(l, v)
+	}
+	return l, nil
 }
 
 func datewalk(date int64, less bool, fulldir, matchdir bool, path string) ([]string, error) {
@@ -94,7 +130,7 @@ func datewalk(date int64, less bool, fulldir, matchdir bool, path string) ([]str
 	})
 }
 
-func dResolve(date int64, less bool, matchdir bool, root string, info os.FileInfo) (string, bool) {
+func dResolve(date int64, less, matchdir bool, root string, info os.FileInfo) (string, bool) {
 	if less {
 		if date > info.ModTime().Unix() {
 			return "", false
@@ -105,13 +141,11 @@ func dResolve(date int64, less bool, matchdir bool, root string, info os.FileInf
 		}
 	}
 	root = filepath.ToSlash(root)
-	if info.IsDir() {
-		if matchdir {
-			return info.Name(), true
-		}
+	if info.IsDir() && !matchdir {
 		return "", false
 	}
-	return info.Name(), false
+
+	return info.Name(), true
 }
 
 func namewalk(reg *regexp.Regexp, matchdir bool, path string) ([]string, error) {
