@@ -158,11 +158,7 @@ func namewalk(reg *regexp.Regexp, matchdir bool, path string) ([]string, error) 
 			return nil
 		}
 		root = filepath.ToSlash(root)
-		if info.IsDir() {
-			if matchdir {
-				list = append(list, root)
-				return nil
-			}
+		if info.IsDir() && !matchdir {
 			return nil
 		}
 		list = append(list, root)
