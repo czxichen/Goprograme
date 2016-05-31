@@ -1,6 +1,7 @@
 package filepath
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -16,8 +17,20 @@ type FindFiles struct {
 	MatchDir bool   `json:matchdir`
 }
 
+func (self FindFiles) NewFind(date int64, reg string) ([]string, int64, error) {
+	switch {
+	case date != 0 && len(reg) > 0:
+		return self.DateAndRegexp(date, reg)
+	case date != 0:
+		return self.DateFindFile(date)
+	case len(reg) > 0:
+		return self.RegFindFile(reg)
+	}
+	return nil, 0, errors.New("Unknow args")
+}
+
 //date小于等于0的时候表示查找最近这段时间的文件
-func (self FindFiles) DateFindFile(date int64) ([]string, error) {
+func (self FindFiles) DateFindFile(date int64) ([]string, int64, error) {
 	date = date * 24 * 60 * 60
 	var less bool
 	switch {
@@ -31,7 +44,7 @@ func (self FindFiles) DateFindFile(date int64) ([]string, error) {
 	return datewalk(date, less, self.FullDir, self.MatchDir, self.Path)
 }
 
-func (self FindFiles) RegFindFile(reg string) ([]string, error) {
+func (self FindFiles) RegFindFile(reg string) ([]string, int64, error) {
 	if strings.Index(reg, "*") == 0 {
 		reg = "." + reg
 	} else {
@@ -40,15 +53,16 @@ func (self FindFiles) RegFindFile(reg string) ([]string, error) {
 	reg += "$"
 	Reg, err := regexp.Compile(reg)
 	if err != nil {
-		return []string{}, nil
+		return []string{}, 0, nil
 	}
 	if self.FullDir {
 		return namewalk(Reg, self.MatchDir, self.Path)
 	}
+	var size int64
 	var list []string
 	infos, err := readDir(self.Path)
 	if err != nil {
-		return list, nil
+		return list, size, nil
 	}
 	path := filepath.ToSlash(self.Path)
 	if !strings.HasSuffix(path, "/") {
@@ -60,16 +74,17 @@ func (self FindFiles) RegFindFile(reg string) ([]string, error) {
 				continue
 			}
 			list = append(list, path+v.Name())
+			size += v.Size()
 		}
 	}
-	return list, nil
+	return list, size, nil
 }
 
-func (self FindFiles) DateAndRegexp(date int64, reg string) ([]string, error) {
+func (self FindFiles) DateAndRegexp(date int64, reg string) ([]string, int64, error) {
 	var l []string
-	list, err := self.RegFindFile(reg)
+	list, size, err := self.RegFindFile(reg)
 	if err != nil {
-		return l, err
+		return l, size, err
 	}
 	date = date * 24 * 60 * 60
 	var less bool = false
@@ -86,38 +101,42 @@ func (self FindFiles) DateAndRegexp(date int64, reg string) ([]string, error) {
 		}
 		if less {
 			if date > info.ModTime().Unix() {
+				size -= info.Size()
 				continue
 			}
 		} else {
 			if date < info.ModTime().Unix() {
+				size -= info.Size()
 				continue
 			}
 		}
 		l = append(l, v)
 	}
-	return l, nil
+	return l, size, nil
 }
 
-func datewalk(date int64, less bool, fulldir, matchdir bool, path string) ([]string, error) {
+func datewalk(date int64, less bool, fulldir, matchdir bool, path string) ([]string, int64, error) {
 	var list []string
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
 	}
+	var size int64
 	if !fulldir {
 		infos, err := readDir(path)
 		if err != nil {
-			return list, err
+			return list, size, err
 		}
 		for _, info := range infos {
 			file, ok := dResolve(date, less, matchdir, path, info)
 			if ok {
 				file = path + file
 				list = append(list, file)
+				size += info.Size()
 			}
 		}
-		return list, nil
+		return list, size, nil
 	}
-	return list, filepath.Walk(path, func(root string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path, func(root string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -125,9 +144,11 @@ func datewalk(date int64, less bool, fulldir, matchdir bool, path string) ([]str
 		if ok {
 			root = filepath.ToSlash(root)
 			list = append(list, root)
+			size += info.Size()
 		}
 		return nil
 	})
+	return list, size, err
 }
 
 func dResolve(date int64, less, matchdir bool, root string, info os.FileInfo) (string, bool) {
@@ -148,9 +169,10 @@ func dResolve(date int64, less, matchdir bool, root string, info os.FileInfo) (s
 	return info.Name(), true
 }
 
-func namewalk(reg *regexp.Regexp, matchdir bool, path string) ([]string, error) {
+func namewalk(reg *regexp.Regexp, matchdir bool, path string) ([]string, int64, error) {
 	var list []string
-	return list, filepath.Walk(path, func(root string, info os.FileInfo, err error) error {
+	var size int64
+	err := filepath.Walk(path, func(root string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -162,8 +184,10 @@ func namewalk(reg *regexp.Regexp, matchdir bool, path string) ([]string, error) 
 			return nil
 		}
 		list = append(list, root)
+		size += info.Size()
 		return nil
 	})
+	return list, size, err
 }
 
 func readDir(path string) ([]os.FileInfo, error) {
@@ -178,7 +202,6 @@ func readDir(path string) ([]os.FileInfo, error) {
 }
 
 /*
-
 type fileInfo []os.FileInfo
 
 func (self fileInfo) Less(i, j int) bool {
