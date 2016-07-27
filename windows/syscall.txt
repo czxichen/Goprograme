@@ -1,0 +1,106 @@
+package main
+
+import (
+	"fmt"
+	"syscall"
+	"time"
+	"unsafe"
+)
+
+type PERFORMANCE_INFORMATION struct {
+	Cb                uint32 //对应DWORD
+	CommitTotal       uint64 //对应SIZE_T
+	CommitLimit       uint64
+	CommitPeak        uint64
+	PhysicalTotal     uint64
+	PhysicalAvailable uint64
+	SystemCache       uint64
+	KernelTotal       uint64
+	KernelPaged       uint64
+	KernelNonpaged    uint64
+	PageSize          uint64
+	HandleCount       uint32
+	ProcessCount      uint32
+	ThreadCount       uint32
+}
+type NAMELESS struct {
+	Protection  uint32 //:5;
+	ShareCount  uint32 // :3;
+	Shared      uint32 //:1;
+	Reserved    uint32 //:3;
+	VirtualPage uint32 //:52;
+}
+type PSAPI_WORKING_SET_BLOCK struct {
+	Flags uint32
+	NAMELESS
+}
+
+type PSAPI_WORKING_SET_INFORMATION struct {
+	NumberOfEntries uint32
+	WorkingSetInfo  [1500]PSAPI_WORKING_SET_BLOCK
+}
+
+var modkernel32 = syscall.NewLazyDLL("kernel32.dll")
+var Psapi = syscall.NewLazyDLL("Psapi.dll")
+
+func main() {
+	proc := modkernel32.NewProc("K32GetPerformanceInfo")
+	var info PERFORMANCE_INFORMATION
+	b, _, err := proc.Call((uintptr)(unsafe.Pointer(&info)), unsafe.Sizeof(info))
+	fmt.Println(b, err)
+	hand, err := syscall.GetCurrentProcess()
+	if err != nil {
+		fmt.Println("get currentProcess error")
+		return
+	}
+	time.Sleep(20e9)
+	var list PSAPI_WORKING_SET_INFORMATION
+	proc = Psapi.NewProc("QueryWorkingSet")
+	ok, _, err := proc.Call(uintptr(hand), (uintptr)(unsafe.Pointer(&list)), unsafe.Sizeof(list))
+	fmt.Println(ok, err)
+	var size int
+	for i := 0; i < int(list.NumberOfEntries); i++ {
+		if list.WorkingSetInfo[i].Shared == 0 {
+			size += int(info.PageSize)
+		}
+	}
+	fmt.Println(size / 1024)
+}
+const (
+	PROCESS_QUERY_INFORMATION = 1 << 10
+	PROCESS_VM_READ           = 1 << 4
+)
+
+type PROCESS_MEMORY_COUNTERS struct {
+	cb                         uint32
+	PageFaultCount             uint32
+	PeakWorkingSetSize         uint64
+	WorkingSetSize             uint64
+	QuotaPeakPagedPoolUsage    uint64
+	QuotaPagedPoolUsage        uint64
+	QuotaPeakNonPagedPoolUsage uint64
+	QuotaNonPagedPoolUsage     uint64
+	PagefileUsage              uint64
+	PeakPagefileUsage          uint64
+}
+
+func main() {
+	current, err := syscall.OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_READ, false, 21984)
+	defer syscall.CloseHandle(current)
+	if err != nil {
+		return
+	}
+	psapi := syscall.NewLazyDLL("psapi.dll")
+	var process PROCESS_MEMORY_COUNTERS
+	process.cb = uint32(unsafe.Sizeof((process)))
+	GetProcessMemoryInfo := psapi.NewProc("GetProcessMemoryInfo")
+
+	_, _, err = GetProcessMemoryInfo.Call(uintptr(current), uintptr(unsafe.Pointer(&process)), uintptr(process.cb))
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println("PageFaultCount: ", process.PageFaultCount)
+	fmt.Println("PeakWorkingSetSize: ", process.PeakWorkingSetSize)
+	fmt.Println("WorkingSetSize: ", process.WorkingSetSize)
+	fmt.Println("QuotaPeakPagedPoolUsage: ", process.QuotaPeakPagedPoolUsage)
+}
