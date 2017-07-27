@@ -1,0 +1,96 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+)
+
+var (
+	dir      string
+	split    string
+	index    int
+	suffix   string
+	fullpath bool
+)
+
+func init() {
+	flag.StringVar(&dir, "d", "./", `-d ./ 指定排序的文件目录`)
+	flag.StringVar(&split, "S", ".", `-S "." 指定分隔符`)
+	flag.IntVar(&index, "i", 0, "-i 0 指定使用哪一列进行排序")
+	flag.StringVar(&suffix, "s", "", `-s ".sql" 指定排序文件的后缀`)
+	flag.BoolVar(&fullpath, "p", false, "-p true 是否打印完整路径")
+	flag.Parse()
+}
+
+func main() {
+	path, err := os.Open(dir)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer path.Close()
+	info, err := path.Stat()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if !info.IsDir() {
+		fmt.Println("指定的路径必须是文件目录")
+		return
+	}
+
+	files, err := path.Readdir(-1)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	var list = make(byName, 0, len(files))
+	for _, name := range files {
+		if !strings.HasSuffix(name.Name(), suffix) {
+			continue
+		}
+		list = append(list, name.Name())
+	}
+	sort.Sort(list)
+	basedir := filepath.Dir(dir)
+	for _, path := range list {
+		if fullpath {
+			fmt.Println(basedir + string(filepath.Separator) + path)
+		} else {
+			fmt.Println(path)
+		}
+	}
+}
+
+type byName []string
+
+func (f byName) Len() int { return len(f) }
+
+func (f byName) Less(i, j int) bool {
+	list := strings.Split(f[i], split)
+	if index > len(list)-1 {
+		return false
+	}
+	a := list[index]
+	list = strings.Split(f[j], split)
+	if index > len(list)-1 {
+		return false
+	}
+	b := list[index]
+	aint, err := strconv.Atoi(a)
+	if err != nil {
+		return a < b
+	}
+	bint, err := strconv.Atoi(b)
+	if err != nil {
+		return a < b
+	}
+	return aint < bint
+}
+
+func (f byName) Swap(i, j int) { f[i], f[j] = f[j], f[i] }

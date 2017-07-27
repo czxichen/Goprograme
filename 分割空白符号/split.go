@@ -17,7 +17,6 @@ func split(str string) []string {
 			continue
 		}
 		if strings.Contains(v, "	") {
-
 			list := strings.Split(v, "	")
 			for _, v := range list {
 				if len(v) == 0 {

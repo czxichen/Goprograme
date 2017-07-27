@@ -211,7 +211,7 @@ func Engines() *xorm.Engine {
 	}
 	Engine.SetTableMapper(core.SameMapper{})
 	if debug {
-		Engine.ShowSQL = true
+		Engine.ShowSQL(true)
 	}
 	return Engine
 }

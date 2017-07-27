@@ -36,6 +36,7 @@ func (hc *HeadConnection) readHead() error {
 	if l != HeadLenght {
 		return headLenghtError
 	}
+
 	MsgLen, _ := binary.Varint(head[2:l])
 	hc.lock.Lock()
 	hc.CodeType = [2]byte{head[0], head[1]}

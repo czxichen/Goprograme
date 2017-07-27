@@ -1,0 +1,97 @@
+package main
+
+import (
+	"net"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+var (
+	ips []string
+)
+
+func init() {
+	help := `Usage: ` + os.Args[0] + ` -h 127.0.0.1:15201-15206 open`
+	if len(os.Args) != 4 {
+		println(help)
+		os.Exit(1)
+	}
+	if os.Args[1] != "-h" {
+		println(help)
+		os.Exit(1)
+	}
+	ips = ParseIP(os.Args[2])
+	if len(ips) == 0 {
+		println("Usage: -h 127.0.0.1:15201 or -h 127.0.0.1:15201-15206")
+	}
+}
+
+func main() {
+	var wait = new(sync.WaitGroup)
+	for _, ip := range ips {
+		wait.Add(1)
+		go Telnet(os.Args[3], ip, wait)
+	}
+	wait.Wait()
+}
+
+func ParseIP(ip string) (ips []string) {
+	ips = []string{ip}
+	list := strings.Split(ip, ":")
+	if len(list) != 2 || strings.Count(ip, "-") > 1 {
+		return []string{}
+	}
+
+	if strs := strings.Split(list[1], "-"); len(strs) == 2 {
+		start, err := strconv.Atoi(strs[0])
+		if err != nil {
+			return
+		}
+		end, err := strconv.Atoi(strs[1])
+		if err != nil {
+			return
+		}
+		ips = []string{}
+		for i := 0; i < (end - start + 1); i++ {
+			ips = append(ips, list[0]+":"+strconv.Itoa(start+i))
+		}
+	}
+	return
+}
+
+func PortIsOpen(ip string) bool {
+	con, err := net.DialTimeout("tcp", ip, time.Duration(10)*time.Second)
+	if err != nil {
+		println("Error Info:", err.Error())
+		return false
+	}
+	con.Close()
+	return true
+}
+
+func Telnet(msg string, ip string, wait *sync.WaitGroup) {
+	defer wait.Done()
+	con, err := net.DialTimeout("tcp", ip, time.Duration(10)*time.Second)
+	if err != nil {
+		println("dial faild ", err.Error())
+		return
+	}
+	b := make([]byte, 80)
+	n, err := con.Read(b)
+	if err != nil {
+		return
+	}
+	println(string(b[:n]))
+	buf := []byte(msg)
+	con.Write(append(buf, []byte("\r\n")...))
+	con.SetReadDeadline(time.Now().Add(time.Second * 3))
+	n, err = con.Read(b)
+	if err != nil {
+		return
+	}
+	println(string(b[:n]))
+	con.Close()
+}
